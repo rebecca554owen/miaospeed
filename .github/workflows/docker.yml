@@ -55,4 +55,4 @@ jobs:
 #            ${{ secrets.DOCKERHUB_USERNAME }}/miaospeed:latest
 
           build-args: |
-            MY_BUILDTOKEN=${{ secrets.MY_BUILDTOKEN }}
+            MS_BUILDTOKEN=${{ secrets.MS_BUILDTOKEN }}
