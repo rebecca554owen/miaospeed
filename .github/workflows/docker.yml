@@ -49,9 +49,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-#            ${{ secrets.DOCKERHUB_USERNAME }}/miaospeed:${{ steps.get_version.outputs.version }}
-#            ${{ secrets.DOCKERHUB_USERNAME }}/miaospeed:latest
             ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.version }}
             ghcr.io/${{ github.repository }}:latest
+#            ${{ secrets.DOCKERHUB_USERNAME }}/miaospeed:${{ steps.get_version.outputs.version }}
+#            ${{ secrets.DOCKERHUB_USERNAME }}/miaospeed:latest
+
           build-args: |
             MY_BUILDTOKEN=${{ secrets.MY_BUILDTOKEN }}
