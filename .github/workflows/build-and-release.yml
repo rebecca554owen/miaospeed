@@ -15,7 +15,41 @@ jobs:
       # ACTIONS_ALLOW_UNSECURE_COMMANDS: true
     strategy:
       matrix:
-        arch: [amd64, arm64]
+        os: [linux, darwin, windows, freebsd]
+        arch: [amd64, arm64, 386, armv5, armv6, armv7, loong64, mips, mips64, mips64le, mipsle, riscv64]
+        exclude:
+          - os: windows
+            arch: armv5
+          - os: windows
+            arch: armv6
+          - os: windows
+            arch: loong64
+          - os: windows
+            arch: mips
+          - os: windows
+            arch: mips64
+          - os: windows
+            arch: mips64le
+          - os: windows
+            arch: mipsle
+          - os: windows
+            arch: riscv64
+          - os: freebsd
+            arch: armv5
+          - os: freebsd
+            arch: armv6
+          - os: freebsd
+            arch: loong64
+          - os: freebsd
+            arch: mips
+          - os: freebsd
+            arch: mips64
+          - os: freebsd
+            arch: mips64le
+          - os: freebsd
+            arch: mipsle
+          - os: freebsd
+            arch: riscv64
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,6 +78,7 @@ jobs:
       - name: Generate certificates and build application
         env:
           GOARCH: ${{ matrix.arch }}
+          GOOS: ${{ matrix.os }}
           MS_BUILDTOKEN: ${{ secrets.MS_BUILDTOKEN }}
           VERSION: ${{ steps.determine_version.outputs.version }}
           BUILDTIME: ${{ steps.gather_build_info.outputs.buildtime }}
@@ -52,11 +87,15 @@ jobs:
           echo $MS_BUILDTOKEN >> ./utils/embeded/BUILDTOKEN.key
           mkdir -p ./preconfigs/embeded/miaokoCA
           openssl req -x509 -newkey ec:<(openssl ecparam -name secp256r1) -nodes -keyout ./preconfigs/embeded/miaokoCA/miaoko.key -out ./preconfigs/embeded/miaokoCA/miaoko.crt -subj "/CN=fulltclash.com"
-          CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -w -s -buildid=" -o miaospeed_${GOARCH} .
+          CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -w -s -buildid=" -o miaospeed_${GOOS}_${GOARCH} .
 
       - name: Archive the build artifacts
         run: |
-          tar -czvf miaospeed_${{ matrix.arch }}.tar.gz miaospeed_${{ matrix.arch }}
+          if [ "${{ matrix.os }}" == "windows" ]; then
+            zip miaospeed_${{ matrix.os }}_${{ matrix.arch }}_${{ steps.determine_version.outputs.version }}.zip miaospeed_${{ matrix.os }}_${{ matrix.arch }}
+          else
+            tar -czvf miaospeed_${{ matrix.os }}_${{ matrix.arch }}_${{ steps.determine_version.outputs.version }}.tar.gz miaospeed_${{ matrix.os }}_${{ matrix.arch }}
+          fi
 
       - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
@@ -65,7 +104,9 @@ jobs:
           name: "v${{ github.event.inputs.version }}"
           body: "More new features are now supported."
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: miaospeed_${{ matrix.arch }}.tar.gz
+          files: |
+            miaospeed_${{ matrix.os }}_${{ matrix.arch }}_${{ steps.determine_version.outputs.version }}.tar.gz
+            miaospeed_${{ matrix.os }}_${{ matrix.arch }}_${{ steps.determine_version.outputs.version }}.zip
 
   update_tag:
     name: Update tag
@@ -90,7 +131,7 @@ jobs:
       - run: |
           cat > release.txt << 'EOF'
           ## 我应该下载哪个版本？
-          一般下载AMD64版本即可，其他平台根据对应的平台下载。
+          一般下载amd64版本即可，其他平台根据实际情况下载对应的版本。
           Created at ${{ env.BUILDTIME }}.
           EOF
 
@@ -98,7 +139,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version }}
-          name: "miaospeed for fulltclash ${{ github.event.inputs.version }}"
+          name: "v${{ github.event.inputs.version }}"
           body_path: release.txt
           token: ${{ secrets.GITHUB_TOKEN }}
           generate_release_notes: true
