@@ -17,12 +17,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [linux, darwin, windows, freebsd]
-        arch: [amd64, arm64, 386, armv5, armv6, armv7, loong64, mips, mips64, mips64le, mipsle, riscv64]
+        arch: [amd64, arm64, 386, loong64, mips, mips64, mips64le, mipsle, riscv64]
         exclude:
-          - os: windows
-            arch: armv5
-          - os: windows
-            arch: armv6
           - os: windows
             arch: loong64
           - os: windows
@@ -36,10 +32,6 @@ jobs:
           - os: windows
             arch: riscv64
           - os: freebsd
-            arch: armv5
-          - os: freebsd
-            arch: armv6
-          - os: freebsd
             arch: loong64
           - os: freebsd
             arch: mips
@@ -50,6 +42,20 @@ jobs:
           - os: freebsd
             arch: mipsle
           - os: freebsd
+            arch: riscv64
+          - os: darwin
+            arch: 386
+          - os: darwin
+            arch: loong64
+          - os: darwin
+            arch: mips
+          - os: darwin
+            arch: mips64
+          - os: darwin
+            arch: mips64le
+          - os: darwin
+            arch: mipsle
+          - os: darwin
             arch: riscv64
     steps:
       - name: Checkout code
