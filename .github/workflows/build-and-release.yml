@@ -10,31 +10,33 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env: 
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true
+      # ACTIONS_ALLOW_UNSECURE_COMMANDS: true
     strategy:
       matrix:
         arch: [amd64, arm64]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          node-version: "20"
           
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: '^1.20'
 
-      - name: Get version
-        id: get_version
+      - name: Determine version
+        id: determine_version
         run: |
           if [[ -z "${{ github.event.inputs.version }}" ]]; then
-            echo "version=$(git describe --tags --always)" >> $GITHUB_OUTPUT
+            VERSION=$(git describe --tags --always)
           else
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            VERSION="${{ github.event.inputs.version }}"
           fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Get build time and commit
-        id: get_build_info
+      - name: Gather build information
+        id: gather_build_info
         run: |
           echo "buildtime=$(date -u '+%Y-%m-%d_%I:%M:%S%p(UTC%:z)')" >> $GITHUB_OUTPUT
           echo "commit=$(git rev-parse --short HEAD || echo 'Unknown')" >> $GITHUB_OUTPUT
@@ -43,9 +45,9 @@ jobs:
         env:
           GOARCH: ${{ matrix.arch }}
           MS_BUILDTOKEN: ${{ secrets.MS_BUILDTOKEN }}
-          VERSION: ${{ steps.get_version.outputs.version }}
-          BUILDTIME: ${{ steps.get_build_info.outputs.buildtime }}
-          COMMIT: ${{ steps.get_build_info.outputs.commit }}
+          VERSION: ${{ steps.determine_version.outputs.version }}
+          BUILDTIME: ${{ steps.gather_build_info.outputs.buildtime }}
+          COMMIT: ${{ steps.gather_build_info.outputs.commit }}
         run: |
           echo $MS_BUILDTOKEN >> ./utils/embeded/BUILDTOKEN.key
           mkdir -p ./preconfigs/embeded/miaokoCA
@@ -56,7 +58,7 @@ jobs:
         run: |
           tar -czvf miaospeed_${{ matrix.arch }}.tar.gz miaospeed_${{ matrix.arch }}
 
-      - name: Upload release assets
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: miaospeed_${{ matrix.arch }}.tar.gz
@@ -69,12 +71,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set Env
+      - name: Set Environment Variables
         run: |
           echo "BUILDTIME=$(TZ=Asia/Shanghai date)" >> $GITHUB_ENV
         shell: bash
 
-      - name: Create release notes
+      - name: Create Release Notes
         run: |
           cat > release.txt << 'EOF'
           ## 我应该下载哪个版本？
@@ -82,12 +84,12 @@ jobs:
           Created at ${{ env.BUILDTIME }}.
           EOF
 
-      - name: Download Artifacts
+      - name: Download Build Artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./artifacts
 
-      - name: Create Release
+      - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
@@ -97,20 +99,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           generate_release_notes: true
 
-      - name: Upload Release Assets (amd64)
+      - name: Upload Assets to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/miaospeed_amd64.tar.gz
-          asset_name: miaospeed_amd64.tar.gz
-          asset_content_type: application/gzip
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Release Assets (arm64)
-        uses: softprops/action-gh-release@v2
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/miaospeed_arm64.tar.gz
-          asset_name: miaospeed_arm64.tar.gz
-          asset_content_type: application/gzip
-          token: ${{ secrets.GITHUB_TOKEN }}
+          files: ./artifacts/*
