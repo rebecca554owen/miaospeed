@@ -62,7 +62,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version }}
-          name: "${{ github.event.inputs.version }}"
+          name: "v${{ github.event.inputs.version }}"
           body: "More new features are now supported."
           token: ${{ secrets.GITHUB_TOKEN }}
           files: miaospeed_${{ matrix.arch }}.tar.gz
@@ -90,7 +90,7 @@ jobs:
       - run: |
           cat > release.txt << 'EOF'
           ## 我应该下载哪个版本？
-
+          一般下载AMD64版本即可，其他平台根据对应的平台下载。
           Created at ${{ env.BUILDTIME }}.
           EOF
 
@@ -100,6 +100,5 @@ jobs:
           tag_name: ${{ github.event.inputs.version }}
           name: "miaospeed for fulltclash ${{ github.event.inputs.version }}"
           body_path: release.txt
-          prerelease: true
           token: ${{ secrets.GITHUB_TOKEN }}
           generate_release_notes: true
