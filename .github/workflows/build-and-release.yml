@@ -12,12 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     env: 
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true
-      # ACTIONS_ALLOW_UNSECURE_COMMANDS: true
     strategy:
       fail-fast: false
       matrix:
         os: [linux, darwin, windows, freebsd]
-        arch: [amd64, arm64, 386, loong64, mips, mips64, mips64le, mipsle, riscv64]
+        arch: [amd64, amd64-avx, arm64, 386, loong64, mips, mips64, mips64le, mipsle, riscv64]
         exclude:
           - os: windows
             arch: loong64
@@ -94,7 +93,21 @@ jobs:
           echo $MS_BUILDTOKEN >> ./utils/embeded/BUILDTOKEN.key
           mkdir -p ./preconfigs/embeded/miaokoCA
           openssl req -x509 -newkey ec:<(openssl ecparam -name secp256r1) -nodes -keyout ./preconfigs/embeded/miaokoCA/miaoko.key -out ./preconfigs/embeded/miaokoCA/miaoko.crt -subj "/CN=fulltclash.com"
-          CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -w -s -buildid=" -o miaospeed_${GOOS}_${GOARCH} .
+          if [ "${GOARCH}" == "amd64-avx" ]; then
+            CGO_ENABLED=0 GOOS=$GOOS GOARCH=amd64 go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -s -w -buildid= -gcflags='-m -l -N -l -m -m'" -o miaospeed_${GOOS}_amd64_avx .
+          else
+            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -s -w -buildid=" -o miaospeed_${GOOS}_${GOARCH} .
+          fi
+
+      - name: Compress the binary with UPX
+        run: |
+          if [ "${GOARCH}" == "amd64-avx" ]; then
+            upx --best --lzma -o miaospeed_packed miaospeed_${GOOS}_amd64_avx
+            mv miaospeed_packed miaospeed_${GOOS}_amd64_avx
+          else
+            upx --best --lzma -o miaospeed_packed miaospeed_${GOOS}_${GOARCH}
+            mv miaospeed_packed miaospeed_${GOOS}_${GOARCH}
+          fi
 
       - name: Archive the build artifacts
         run: |
