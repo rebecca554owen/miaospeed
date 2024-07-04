@@ -10,13 +10,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
+    env: 
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true
+      # ACTIONS_ALLOW_UNSECURE_COMMANDS: true
     strategy:
       fail-fast: false
       matrix:
         os: [linux, darwin, windows, freebsd]
-        arch: [amd64, amd64-avx, arm64, 386, loong64, mips, mips64, mips64le, mipsle, riscv64]
+        arch: [amd64, arm64, 386, loong64, mips, mips64, mips64le, mipsle, riscv64, amd64-avx]
         exclude:
           - os: windows
             arch: loong64
@@ -59,7 +60,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+          
       - name: Set up Go environment
         uses: actions/setup-go@v4
         with:
@@ -90,34 +91,11 @@ jobs:
           BUILDTIME: ${{ steps.gather_build_info.outputs.buildtime }}
           COMMIT: ${{ steps.gather_build_info.outputs.commit }}
         run: |
-          echo "Building for OS: ${GOOS}, ARCH: ${GOARCH}"
           echo $MS_BUILDTOKEN >> ./utils/embeded/BUILDTOKEN.key
           mkdir -p ./preconfigs/embeded/miaokoCA
           openssl req -x509 -newkey ec:<(openssl ecparam -name secp256r1) -nodes -keyout ./preconfigs/embeded/miaokoCA/miaoko.key -out ./preconfigs/embeded/miaokoCA/miaoko.crt -subj "/CN=fulltclash.com"
-          if [ "${GOARCH}" == "amd64-avx" ]; then
-            echo "Using amd64-avx specific flags"
-            CGO_ENABLED=0 GOOS=$GOOS GOARCH=amd64 go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -s -w -buildid=" -o miaospeed_${GOOS}_amd64_avx .
-          else
-            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -s -w -buildid=" -o miaospeed_${GOOS}_${GOARCH} .
-          fi
-
-      - name: Verify build output
-        run: |
-          if [ "${GOARCH}" == "amd64-avx" ]; then
-            ls -l miaospeed_${GOOS}_amd64_avx
-          else
-            ls -l miaospeed_${GOOS}_${GOARCH}
-          fi
-
-      - name: Compress the binary with UPX
-        run: |
-          if [ "${GOARCH}" == "amd64-avx" ]; then
-            upx --best --lzma -o miaospeed_packed miaospeed_${GOOS}_amd64_avx
-            mv miaospeed_packed miaospeed_${GOOS}_amd64_avx
-          else
-            upx --best --lzma -o miaospeed_packed miaospeed_${GOOS}_${GOARCH}
-            mv miaospeed_packed miaospeed_${GOOS}_${GOARCH}
-          fi
+          CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -w -s -buildid=" -o miaospeed_${GOOS}_${GOARCH} .
+          upx --best miaospeed_${GOOS}_${GOARCH} # 使用UPX优化二进制文件
 
       - name: Archive the build artifacts
         run: |
