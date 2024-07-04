@@ -3,6 +3,9 @@ FROM golang:alpine3.19 AS builder
 
 # 接受构建时传入的参数
 ARG MS_BUILDTOKEN
+ARG VERSION
+ARG BUILDTIME
+ARG COMMIT
 ENV BUILDTOKEN=$MS_BUILDTOKEN
 
 # 复制当前目录下的所有文件到 /opt
@@ -13,11 +16,17 @@ WORKDIR /opt
 
 # 安装必要的包，生成证书，并进行构建
 RUN apk add --no-cache \
-    ca-certificates openssl && \
+    ca-certificates openssl git && \
     echo $BUILDTOKEN >> /opt/utils/embeded/BUILDTOKEN.key && \
     mkdir -p /opt/preconfigs/embeded/miaokoCA && \
     openssl req -x509 -newkey ec:<(openssl ecparam -name secp256r1) -nodes -keyout /opt/preconfigs/embeded/miaokoCA/miaoko.key -out /opt/preconfigs/embeded/miaokoCA/miaoko.crt -subj "/CN=fulltclash.com" && \
-    go build .
+    VERSION=${VERSION:-$(git describe --tags --abbrev=0 || echo "Unknown")} && \
+    BUILDTIME=${BUILDTIME:-$(date -u '+%Y-%m-%d_%I:%M:%S%p(UTC%:z)')} && \
+    COMMIT=${COMMIT:-$(git rev-parse --short HEAD || echo "Unknown")} && \
+    CGO_ENABLED=0 go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' \
+    -X 'main.COMPILATIONTIME=$BUILDTIME' \
+    -X 'main.COMMIT=$COMMIT' \
+    -w -s -buildid=" -o miaospeed .
 
 # 使用更小的 Alpine 镜像作为运行阶段
 FROM alpine:latest
