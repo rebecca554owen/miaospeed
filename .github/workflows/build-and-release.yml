@@ -96,6 +96,10 @@ jobs:
           openssl req -x509 -newkey ec:<(openssl ecparam -name secp256r1) -nodes -keyout ./preconfigs/embeded/miaokoCA/miaoko.key -out ./preconfigs/embeded/miaokoCA/miaoko.crt -subj "/CN=fulltclash.com"
           CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -w -s -buildid=" -o miaospeed_${GOOS}_${GOARCH} .
 
+      - name: Optimize with UPX
+        run: |
+          upx --best --lzma miaospeed_${{ matrix.os }}_${{ matrix.arch }}
+
       - name: Archive the build artifacts
         run: |
           if [ "${{ matrix.os }}" == "windows" ]; then
