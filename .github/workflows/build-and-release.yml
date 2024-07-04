@@ -55,7 +55,7 @@ jobs:
           tar -czvf miaospeed_${{ matrix.arch }}.tar.gz miaospeed_${{ matrix.arch }}
 
       - name: Upload release assets
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: miaospeed_${{ matrix.arch }}.tar.gz
           path: miaospeed_${{ matrix.arch }}.tar.gz
@@ -65,13 +65,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: ./artifacts
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v3
+        uses: actions/create-release@v4
         with:
           tag_name: ${{ github.event.inputs.version }}
           release_name: Release ${{ github.event.inputs.version }}
@@ -84,7 +84,7 @@ jobs:
             Commit: ${{ steps.get_build_info.outputs.commit }}
 
       - name: Upload Release Assets
-        uses: actions/upload-release-asset@v3
+        uses: actions/upload-release-asset@v4
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./artifacts/miaospeed_amd64.tar.gz
@@ -92,7 +92,7 @@ jobs:
           asset_content_type: application/gzip
 
       - name: Upload Release Assets
-        uses: actions/upload-release-asset@v3
+        uses: actions/upload-release-asset@v4
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./artifacts/miaospeed_arm64.tar.gz
