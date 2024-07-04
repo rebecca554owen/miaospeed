@@ -17,6 +17,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -64,6 +69,22 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set Env
+        run: |
+          echo "BUILDTIME=$(TZ=Asia/Shanghai date)" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Create release notes
+        run: |
+          cat > release.txt << 'EOF'
+          ## 我应该下载哪个版本？
+
+          Created at ${{ env.BUILDTIME }}.
+          EOF
+
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -71,30 +92,28 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version }}
-          release_name: Release ${{ github.event.inputs.version }}
-          draft: false
-          prerelease: false
+          name: "miaospeed for fulltclash ${{ github.event.inputs.version }}"
+          body_path: release.txt
+          token: ${{ secrets.GITHUB_TOKEN }}
           generate_release_notes: true
-          body: |
-            Version: ${{ github.event.inputs.version }}
-            Build Time: ${{ steps.get_build_info.outputs.buildtime }}
-            Commit: ${{ steps.get_build_info.outputs.commit }}
 
-      - name: Upload Release Assets
-        uses: actions/upload-release-asset@v3
+      - name: Upload Release Assets (amd64)
+        uses: softprops/action-gh-release@v2
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./artifacts/miaospeed_amd64.tar.gz
           asset_name: miaospeed_amd64.tar.gz
           asset_content_type: application/gzip
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Release Assets
-        uses: actions/upload-release-asset@v3
+      - name: Upload Release Assets (arm64)
+        uses: softprops/action-gh-release@v2
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./artifacts/miaospeed_arm64.tar.gz
           asset_name: miaospeed_arm64.tar.gz
           asset_content_type: application/gzip
+          token: ${{ secrets.GITHUB_TOKEN }}
