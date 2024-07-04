@@ -96,7 +96,11 @@ jobs:
           openssl req -x509 -newkey ec:<(openssl ecparam -name secp256r1) -nodes -keyout ./preconfigs/embeded/miaokoCA/miaoko.key -out ./preconfigs/embeded/miaokoCA/miaoko.crt -subj "/CN=fulltclash.com"
           CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -w -s -buildid=" -o miaospeed_${GOOS}_${GOARCH} .
 
+      - name: Install UPX
+        run: sudo apt-get install -y upx
+
       - name: Optimize with UPX
+        if: ${{ !contains('windows arm64 freebsd amd64 freebsd arm64 freebsd 386 linux loong64 linux mips64 linux mips64le linux riscv64', format('{0} {1}', matrix.os, matrix.arch)) }}
         run: |
           upx --best --lzma miaospeed_${{ matrix.os }}_${{ matrix.arch }}
 
