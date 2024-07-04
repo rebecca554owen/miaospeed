@@ -1,0 +1,100 @@
+name: build and release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Enter the version tag for the release:'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [[ -z "${{ github.event.inputs.version }}" ]]; then
+            echo "version=$(git describe --tags --always)" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get build time and commit
+        id: get_build_info
+        run: |
+          echo "buildtime=$(date -u '+%Y-%m-%d_%I:%M:%S%p(UTC%:z)')" >> $GITHUB_OUTPUT
+          echo "commit=$(git rev-parse --short HEAD || echo 'Unknown')" >> $GITHUB_OUTPUT
+
+      - name: Generate certificates and build
+        env:
+          GOARCH: ${{ matrix.arch }}
+          MS_BUILDTOKEN: ${{ secrets.MS_BUILDTOKEN }}
+          VERSION: ${{ steps.get_version.outputs.version }}
+          BUILDTIME: ${{ steps.get_build_info.outputs.buildtime }}
+          COMMIT: ${{ steps.get_build_info.outputs.commit }}
+        run: |
+          echo $MS_BUILDTOKEN >> ./utils/embeded/BUILDTOKEN.key
+          mkdir -p ./preconfigs/embeded/miaokoCA
+          openssl req -x509 -newkey ec:<(openssl ecparam -name secp256r1) -nodes -keyout ./preconfigs/embeded/miaokoCA/miaoko.key -out ./preconfigs/embeded/miaokoCA/miaoko.crt -subj "/CN=fulltclash.com"
+          CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -w -s -buildid=" -o miaospeed_${GOARCH} .
+
+      - name: Archive the build
+        run: |
+          tar -czvf miaospeed_${{ matrix.arch }}.tar.gz miaospeed_${{ matrix.arch }}
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v3
+        with:
+          name: miaospeed_${{ matrix.arch }}.tar.gz
+          path: miaospeed_${{ matrix.arch }}.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: ./artifacts
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v3
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          release_name: Release ${{ github.event.inputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            Version: ${{ github.event.inputs.version }}
+            Build Time: ${{ steps.get_build_info.outputs.buildtime }}
+            Commit: ${{ steps.get_build_info.outputs.commit }}
+
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v3
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/miaospeed_amd64.tar.gz
+          asset_name: miaospeed_amd64.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v3
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/miaospeed_arm64.tar.gz
+          asset_name: miaospeed_arm64.tar.gz
+          asset_content_type: application/gzip
