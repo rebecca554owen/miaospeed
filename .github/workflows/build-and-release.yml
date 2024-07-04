@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [linux, darwin, windows, freebsd]
-        arch: [amd64, arm64, 386, loong64, mips, mips64, mips64le, mipsle, riscv64, amd64-avx]
+        arch: [amd64, arm64, 386, loong64, mips, mips64, mips64le, mipsle, riscv64]
         exclude:
           - os: windows
             arch: loong64
@@ -95,7 +95,6 @@ jobs:
           mkdir -p ./preconfigs/embeded/miaokoCA
           openssl req -x509 -newkey ec:<(openssl ecparam -name secp256r1) -nodes -keyout ./preconfigs/embeded/miaokoCA/miaoko.key -out ./preconfigs/embeded/miaokoCA/miaoko.crt -subj "/CN=fulltclash.com"
           CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -w -s -buildid=" -o miaospeed_${GOOS}_${GOARCH} .
-          upx --best miaospeed_${GOOS}_${GOARCH} # 使用UPX优化二进制文件
 
       - name: Archive the build artifacts
         run: |
