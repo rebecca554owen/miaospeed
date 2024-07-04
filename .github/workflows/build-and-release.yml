@@ -94,7 +94,7 @@ jobs:
           mkdir -p ./preconfigs/embeded/miaokoCA
           openssl req -x509 -newkey ec:<(openssl ecparam -name secp256r1) -nodes -keyout ./preconfigs/embeded/miaokoCA/miaoko.key -out ./preconfigs/embeded/miaokoCA/miaoko.crt -subj "/CN=fulltclash.com"
           if [ "${GOARCH}" == "amd64-avx" ]; then
-            CGO_ENABLED=0 GOOS=$GOOS GOARCH=amd64 go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -s -w -buildid= -gcflags='-m -l -N -l -m -m'" -o miaospeed_${GOOS}_amd64_avx .
+            CGO_ENABLED=0 GOOS=$GOOS GOARCH=amd64 go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -s -w -buildid=" -o miaospeed_${GOOS}_amd64_avx .
           else
             CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -s -w -buildid=" -o miaospeed_${GOOS}_${GOARCH} .
           fi
