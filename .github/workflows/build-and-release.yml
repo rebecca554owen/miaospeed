@@ -17,10 +17,10 @@ jobs:
       matrix:
         arch: [amd64, arm64]
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
           
-      - name: Set up Go
+      - name: Set up Go environment
         uses: actions/setup-go@v4
         with:
           go-version: '^1.20'
@@ -41,7 +41,7 @@ jobs:
           echo "buildtime=$(date -u '+%Y-%m-%d_%I:%M:%S%p(UTC%:z)')" >> $GITHUB_OUTPUT
           echo "commit=$(git rev-parse --short HEAD || echo 'Unknown')" >> $GITHUB_OUTPUT
 
-      - name: Generate certificates and build
+      - name: Generate certificates and build application
         env:
           GOARCH: ${{ matrix.arch }}
           MS_BUILDTOKEN: ${{ secrets.MS_BUILDTOKEN }}
@@ -54,7 +54,7 @@ jobs:
           openssl req -x509 -newkey ec:<(openssl ecparam -name secp256r1) -nodes -keyout ./preconfigs/embeded/miaokoCA/miaoko.key -out ./preconfigs/embeded/miaokoCA/miaoko.crt -subj "/CN=fulltclash.com"
           CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go build -trimpath -ldflags "-X 'main.VERSION=$VERSION' -X 'main.COMPILATIONTIME=$BUILDTIME' -X 'main.COMMIT=$COMMIT' -w -s -buildid=" -o miaospeed_${GOARCH} .
 
-      - name: Archive the build
+      - name: Archive the build artifacts
         run: |
           tar -czvf miaospeed_${{ matrix.arch }}.tar.gz miaospeed_${{ matrix.arch }}
 
@@ -68,15 +68,15 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set Environment Variables
+      - name: Set environment variables
         run: |
           echo "BUILDTIME=$(TZ=Asia/Shanghai date)" >> $GITHUB_ENV
         shell: bash
 
-      - name: Create Release Notes
+      - name: Create release notes
         run: |
           cat > release.txt << 'EOF'
           ## 我应该下载哪个版本？
@@ -84,22 +84,17 @@ jobs:
           Created at ${{ env.BUILDTIME }}.
           EOF
 
-      - name: Download Build Artifacts
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./artifacts
 
-      - name: Create GitHub Release
+      - name: Create GitHub release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version }}
-          name: "miaospeed for fulltclash ${{ github.event.inputs.version }}"
-          body_path: release.txt
+          name: "miaospeed for fulltclash"
+          body: "More new features are now supported."
           token: ${{ secrets.GITHUB_TOKEN }}
-          generate_release_notes: true
-
-      - name: Upload Assets to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
           files: ./artifacts/*
