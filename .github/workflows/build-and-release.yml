@@ -62,7 +62,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version }}
-          name: "miaospeed for fulltclash ${{ github.event.inputs.version }}"
+          name: "${{ github.event.inputs.version }}"
           body: "More new features are now supported."
           token: ${{ secrets.GITHUB_TOKEN }}
           files: miaospeed_${{ matrix.arch }}.tar.gz
